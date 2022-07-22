@@ -86,6 +86,8 @@ const ReactFlow = forwardRef<ReactFlowRefType, ReactFlowProps>(
       onSelectionDrag,
       onSelectionDragStop,
       onSelectionContextMenu,
+      customNodeContainer,
+      customEdgeContainer,
       connectionMode = ConnectionMode.Strict,
       connectionLineType = ConnectionLineType.Bezier,
       connectionLineStyle,
@@ -167,6 +169,8 @@ const ReactFlow = forwardRef<ReactFlowRefType, ReactFlowProps>(
             onNodeDoubleClick={onNodeDoubleClick}
             nodeTypes={nodeTypesWrapped}
             edgeTypes={edgeTypesWrapped}
+            customNodeContainer={customNodeContainer}
+            customEdgeContainer={customEdgeContainer}
             connectionLineType={connectionLineType}
             connectionLineStyle={connectionLineStyle}
             connectionLineComponent={connectionLineComponent}

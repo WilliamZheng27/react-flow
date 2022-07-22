@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { Component, memo } from 'react';
 
 import FlowRenderer from '../FlowRenderer';
 import NodeRenderer from '../NodeRenderer';
@@ -14,6 +14,8 @@ export interface GraphViewProps
   selectionKeyCode: KeyCode | null;
   deleteKeyCode: KeyCode | null;
   multiSelectionKeyCode: KeyCode | null;
+  customNodeContainer?: React.FC;
+  customEdgeContainer?: React.FC;
   connectionLineType: ConnectionLineType;
   onlyRenderVisibleElements: boolean;
   defaultZoom: number;
@@ -41,6 +43,8 @@ const GraphView = ({
   onNodeMouseLeave,
   onNodeContextMenu,
   onSelectionContextMenu,
+  customNodeContainer: CustomNodeContainer,
+  customEdgeContainer: CustomEdgeContainer,
   connectionLineType,
   connectionLineStyle,
   connectionLineComponent,
@@ -115,6 +119,7 @@ const GraphView = ({
           edgeTypes={edgeTypes}
           onEdgeClick={onEdgeClick}
           onEdgeDoubleClick={onEdgeDoubleClick}
+          customEdgeContainer={CustomEdgeContainer}
           connectionLineType={connectionLineType}
           connectionLineStyle={connectionLineStyle}
           connectionLineComponent={connectionLineComponent}
@@ -135,6 +140,7 @@ const GraphView = ({
         />
         <NodeRenderer
           nodeTypes={nodeTypes}
+          customNodeContainer={CustomNodeContainer}
           onNodeClick={onNodeClick}
           onNodeDoubleClick={onNodeDoubleClick}
           onNodeMouseEnter={onNodeMouseEnter}

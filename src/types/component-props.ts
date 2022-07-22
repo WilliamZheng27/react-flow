@@ -1,5 +1,6 @@
 import React, {
   ButtonHTMLAttributes,
+  Component,
   CSSProperties,
   HTMLAttributes,
   MouseEvent as ReactMouseEvent,
@@ -83,6 +84,8 @@ export interface ReactFlowProps extends HTMLAttributes<HTMLDivElement> {
   onPaneContextMenu?: (event: ReactMouseEvent) => void;
   nodeTypes?: NodeTypes;
   edgeTypes?: EdgeTypes;
+  customNodeContainer?: React.FC;
+  customEdgeContainer?: React.FC;
   connectionMode?: ConnectionMode;
   connectionLineType?: ConnectionLineType;
   connectionLineStyle?: CSSProperties;

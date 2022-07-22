@@ -8,6 +8,7 @@ import { internalsSymbol } from '../../utils';
 
 interface NodeRendererProps {
   nodeTypes: NodeTypesWrapped;
+  customNodeContainer?: React.FC<any>;
   selectNodesOnDrag: boolean;
   onNodeClick?: NodeMouseHandler;
   onNodeDoubleClick?: NodeMouseHandler;
@@ -31,7 +32,7 @@ const NodeRenderer = (props: NodeRendererProps) => {
   const { nodesDraggable, nodesConnectable, elementsSelectable, updateNodeDimensions } = useStore(selector, shallow);
   const nodes = useVisibleNodes(props.onlyRenderVisibleElements);
   const resizeObserverRef = useRef<ResizeObserver>();
-
+  const CustomNodeContainer = props.customNodeContainer;
   const resizeObserver = useMemo(() => {
     if (typeof ResizeObserver === 'undefined') {
       return null;
@@ -57,62 +58,65 @@ const NodeRenderer = (props: NodeRendererProps) => {
       resizeObserverRef?.current?.disconnect();
     };
   }, []);
+  const nodesElements = nodes.map((node) => {
+    let nodeType = node.type || 'default';
+
+    if (!props.nodeTypes[nodeType]) {
+      // @ts-ignore
+      if (process.env.NODE_ENV === 'development') {
+        console.warn(
+          `[React Flow]: Node type "${nodeType}" not found. Using fallback type "default". Help: https://reactflow.dev/error#300`
+        );
+      }
+
+      nodeType = 'default';
+    }
+
+    const NodeComponent = (props.nodeTypes[nodeType] || props.nodeTypes.default) as ComponentType<WrapNodeProps>;
+    const isDraggable = !!(node.draggable || (nodesDraggable && typeof node.draggable === 'undefined'));
+    const isSelectable = !!(node.selectable || (elementsSelectable && typeof node.selectable === 'undefined'));
+    const isConnectable = !!(node.connectable || (nodesConnectable && typeof node.connectable === 'undefined'));
+
+    return (
+      <NodeComponent
+        key={node.id}
+        id={node.id}
+        className={node.className}
+        style={node.style}
+        type={nodeType}
+        data={node.data}
+        sourcePosition={node.sourcePosition || Position.Bottom}
+        targetPosition={node.targetPosition || Position.Top}
+        hidden={node.hidden}
+        xPos={node.positionAbsolute?.x ?? 0}
+        yPos={node.positionAbsolute?.y ?? 0}
+        selectNodesOnDrag={props.selectNodesOnDrag}
+        onClick={props.onNodeClick}
+        onMouseEnter={props.onNodeMouseEnter}
+        onMouseMove={props.onNodeMouseMove}
+        onMouseLeave={props.onNodeMouseLeave}
+        onContextMenu={props.onNodeContextMenu}
+        onDoubleClick={props.onNodeDoubleClick}
+        selected={!!node.selected}
+        isDraggable={isDraggable}
+        isSelectable={isSelectable}
+        isConnectable={isConnectable}
+        resizeObserver={resizeObserver}
+        dragHandle={node.dragHandle}
+        zIndex={node[internalsSymbol]?.z ?? 0}
+        isParent={!!node[internalsSymbol]?.isParent}
+        noDragClassName={props.noDragClassName}
+        noPanClassName={props.noPanClassName}
+        initialized={!!node.width && !!node.height}
+      />
+    );
+  })
 
   return (
     <div className="react-flow__nodes react-flow__container">
-      {nodes.map((node) => {
-        let nodeType = node.type || 'default';
-
-        if (!props.nodeTypes[nodeType]) {
-          // @ts-ignore
-          if (process.env.NODE_ENV === 'development') {
-            console.warn(
-              `[React Flow]: Node type "${nodeType}" not found. Using fallback type "default". Help: https://reactflow.dev/error#300`
-            );
-          }
-
-          nodeType = 'default';
-        }
-
-        const NodeComponent = (props.nodeTypes[nodeType] || props.nodeTypes.default) as ComponentType<WrapNodeProps>;
-        const isDraggable = !!(node.draggable || (nodesDraggable && typeof node.draggable === 'undefined'));
-        const isSelectable = !!(node.selectable || (elementsSelectable && typeof node.selectable === 'undefined'));
-        const isConnectable = !!(node.connectable || (nodesConnectable && typeof node.connectable === 'undefined'));
-
-        return (
-          <NodeComponent
-            key={node.id}
-            id={node.id}
-            className={node.className}
-            style={node.style}
-            type={nodeType}
-            data={node.data}
-            sourcePosition={node.sourcePosition || Position.Bottom}
-            targetPosition={node.targetPosition || Position.Top}
-            hidden={node.hidden}
-            xPos={node.positionAbsolute?.x ?? 0}
-            yPos={node.positionAbsolute?.y ?? 0}
-            selectNodesOnDrag={props.selectNodesOnDrag}
-            onClick={props.onNodeClick}
-            onMouseEnter={props.onNodeMouseEnter}
-            onMouseMove={props.onNodeMouseMove}
-            onMouseLeave={props.onNodeMouseLeave}
-            onContextMenu={props.onNodeContextMenu}
-            onDoubleClick={props.onNodeDoubleClick}
-            selected={!!node.selected}
-            isDraggable={isDraggable}
-            isSelectable={isSelectable}
-            isConnectable={isConnectable}
-            resizeObserver={resizeObserver}
-            dragHandle={node.dragHandle}
-            zIndex={node[internalsSymbol]?.z ?? 0}
-            isParent={!!node[internalsSymbol]?.isParent}
-            noDragClassName={props.noDragClassName}
-            noPanClassName={props.noPanClassName}
-            initialized={!!node.width && !!node.height}
-          />
-        );
-      })}
+      {CustomNodeContainer ? <CustomNodeContainer>
+        {nodesElements}
+      </CustomNodeContainer> : nodesElements}
     </div>
   );
 };

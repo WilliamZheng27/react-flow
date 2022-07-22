@@ -1,4 +1,4 @@
-import React, { memo, CSSProperties } from 'react';
+import React, { memo, CSSProperties, Component, FunctionComponent } from 'react';
 import shallow from 'zustand/shallow';
 import cc from 'classcat';
 
@@ -22,6 +22,7 @@ import {
 
 interface EdgeRendererProps {
   edgeTypes: EdgeTypesWrapped;
+  customEdgeContainer?: React.FC<any>;
   connectionLineType: ConnectionLineType;
   connectionLineStyle?: CSSProperties;
   connectionLineComponent?: ConnectionLineComponent;
@@ -74,6 +75,7 @@ const EdgeRenderer = (props: EdgeRendererProps) => {
   const {
     connectionLineType,
     defaultMarkerColor,
+    customEdgeContainer: CustomEdgeContainer,
     connectionLineStyle,
     connectionLineComponent,
     connectionLineContainerStyle,
@@ -82,8 +84,101 @@ const EdgeRenderer = (props: EdgeRendererProps) => {
 
   return (
     <>
-      {edgeTree.map(({ level, edges, isMaxLevel }) => (
-        <svg
+      {edgeTree.map(({ level, edges, isMaxLevel }) => {
+          const edgesComponent = edges.map((edge: Edge) => {
+            const [sourceNodeRect, sourceHandleBounds, sourceIsValid] = getNodeData(nodeInternals, edge.source);
+            const [targetNodeRect, targetHandleBounds, targetIsValid] = getNodeData(nodeInternals, edge.target);
+        
+            if (!sourceIsValid || !targetIsValid) {
+              return null;
+            }
+        
+            const edgeType = edge.type || 'default';
+            const EdgeComponent = props.edgeTypes[edgeType] || props.edgeTypes.default;
+            // when connection type is loose we can define all handles as sources
+            const targetNodeHandles =
+              connectionMode === ConnectionMode.Strict
+                ? targetHandleBounds!.target
+                : targetHandleBounds!.target || targetHandleBounds!.source;
+            const sourceHandle = getHandle(sourceHandleBounds!.source!, edge.sourceHandle || null);
+            const targetHandle = getHandle(targetNodeHandles!, edge.targetHandle || null);
+            const sourcePosition = sourceHandle?.position || Position.Bottom;
+            const targetPosition = targetHandle?.position || Position.Top;
+        
+            if (!sourceHandle) {
+              // @ts-ignore
+              if (process.env.NODE_ENV === 'development') {
+                console.warn(
+                  `[React Flow]: Couldn't create edge for source handle id: ${edge.sourceHandle}; edge id: ${edge.id}. Help: https://reactflow.dev/error#800`
+                );
+              }
+              return null;
+            }
+        
+            if (!targetHandle) {
+              // @ts-ignore
+              if (process.env.NODE_ENV === 'development') {
+                console.warn(
+                  `[React Flow]: Couldn't create edge for target handle id: ${edge.targetHandle}; edge id: ${edge.id}. Help: https://reactflow.dev/error#800`
+                );
+              }
+              return null;
+            }
+        
+            const { sourceX, sourceY, targetX, targetY } = getEdgePositions(
+              sourceNodeRect,
+              sourceHandle,
+              sourcePosition,
+              targetNodeRect,
+              targetHandle,
+              targetPosition
+            );
+        
+            return (
+              <EdgeComponent
+                key={edge.id}
+                id={edge.id}
+                className={cc([edge.className, props.noPanClassName])}
+                type={edgeType}
+                data={edge.data}
+                selected={!!edge.selected}
+                animated={!!edge.animated}
+                hidden={!!edge.hidden}
+                label={edge.label}
+                labelStyle={edge.labelStyle}
+                labelShowBg={edge.labelShowBg}
+                labelBgStyle={edge.labelBgStyle}
+                labelBgPadding={edge.labelBgPadding}
+                labelBgBorderRadius={edge.labelBgBorderRadius}
+                style={edge.style}
+                source={edge.source}
+                target={edge.target}
+                sourceHandleId={edge.sourceHandle}
+                targetHandleId={edge.targetHandle}
+                markerEnd={edge.markerEnd}
+                markerStart={edge.markerStart}
+                sourceX={sourceX}
+                sourceY={sourceY}
+                targetX={targetX}
+                targetY={targetY}
+                sourcePosition={sourcePosition}
+                targetPosition={targetPosition}
+                elementsSelectable={elementsSelectable}
+                onEdgeUpdate={props.onEdgeUpdate}
+                onContextMenu={props.onEdgeContextMenu}
+                onMouseEnter={props.onEdgeMouseEnter}
+                onMouseMove={props.onEdgeMouseMove}
+                onMouseLeave={props.onEdgeMouseLeave}
+                onClick={props.onEdgeClick}
+                edgeUpdaterRadius={props.edgeUpdaterRadius}
+                onEdgeDoubleClick={props.onEdgeDoubleClick}
+                onEdgeUpdateStart={props.onEdgeUpdateStart}
+                onEdgeUpdateEnd={props.onEdgeUpdateEnd}
+                rfId={props.rfId}
+              />
+            );
+          });
+        return <svg
           key={level}
           style={{ zIndex: level }}
           width={width}
@@ -92,102 +187,14 @@ const EdgeRenderer = (props: EdgeRendererProps) => {
         >
           {isMaxLevel && <MarkerDefinitions defaultColor={defaultMarkerColor} rfId={props.rfId} />}
           <g>
-            {edges.map((edge: Edge) => {
-              const [sourceNodeRect, sourceHandleBounds, sourceIsValid] = getNodeData(nodeInternals, edge.source);
-              const [targetNodeRect, targetHandleBounds, targetIsValid] = getNodeData(nodeInternals, edge.target);
+            {CustomEdgeContainer? 
+            <CustomEdgeContainer>
+              {edgesComponent}
+            </CustomEdgeContainer> : edgesComponent}
 
-              if (!sourceIsValid || !targetIsValid) {
-                return null;
-              }
-
-              const edgeType = edge.type || 'default';
-              const EdgeComponent = props.edgeTypes[edgeType] || props.edgeTypes.default;
-              // when connection type is loose we can define all handles as sources
-              const targetNodeHandles =
-                connectionMode === ConnectionMode.Strict
-                  ? targetHandleBounds!.target
-                  : targetHandleBounds!.target || targetHandleBounds!.source;
-              const sourceHandle = getHandle(sourceHandleBounds!.source!, edge.sourceHandle || null);
-              const targetHandle = getHandle(targetNodeHandles!, edge.targetHandle || null);
-              const sourcePosition = sourceHandle?.position || Position.Bottom;
-              const targetPosition = targetHandle?.position || Position.Top;
-
-              if (!sourceHandle) {
-                // @ts-ignore
-                if (process.env.NODE_ENV === 'development') {
-                  console.warn(
-                    `[React Flow]: Couldn't create edge for source handle id: ${edge.sourceHandle}; edge id: ${edge.id}. Help: https://reactflow.dev/error#800`
-                  );
-                }
-                return null;
-              }
-
-              if (!targetHandle) {
-                // @ts-ignore
-                if (process.env.NODE_ENV === 'development') {
-                  console.warn(
-                    `[React Flow]: Couldn't create edge for target handle id: ${edge.targetHandle}; edge id: ${edge.id}. Help: https://reactflow.dev/error#800`
-                  );
-                }
-                return null;
-              }
-
-              const { sourceX, sourceY, targetX, targetY } = getEdgePositions(
-                sourceNodeRect,
-                sourceHandle,
-                sourcePosition,
-                targetNodeRect,
-                targetHandle,
-                targetPosition
-              );
-
-              return (
-                <EdgeComponent
-                  key={edge.id}
-                  id={edge.id}
-                  className={cc([edge.className, props.noPanClassName])}
-                  type={edgeType}
-                  data={edge.data}
-                  selected={!!edge.selected}
-                  animated={!!edge.animated}
-                  hidden={!!edge.hidden}
-                  label={edge.label}
-                  labelStyle={edge.labelStyle}
-                  labelShowBg={edge.labelShowBg}
-                  labelBgStyle={edge.labelBgStyle}
-                  labelBgPadding={edge.labelBgPadding}
-                  labelBgBorderRadius={edge.labelBgBorderRadius}
-                  style={edge.style}
-                  source={edge.source}
-                  target={edge.target}
-                  sourceHandleId={edge.sourceHandle}
-                  targetHandleId={edge.targetHandle}
-                  markerEnd={edge.markerEnd}
-                  markerStart={edge.markerStart}
-                  sourceX={sourceX}
-                  sourceY={sourceY}
-                  targetX={targetX}
-                  targetY={targetY}
-                  sourcePosition={sourcePosition}
-                  targetPosition={targetPosition}
-                  elementsSelectable={elementsSelectable}
-                  onEdgeUpdate={props.onEdgeUpdate}
-                  onContextMenu={props.onEdgeContextMenu}
-                  onMouseEnter={props.onEdgeMouseEnter}
-                  onMouseMove={props.onEdgeMouseMove}
-                  onMouseLeave={props.onEdgeMouseLeave}
-                  onClick={props.onEdgeClick}
-                  edgeUpdaterRadius={props.edgeUpdaterRadius}
-                  onEdgeDoubleClick={props.onEdgeDoubleClick}
-                  onEdgeUpdateStart={props.onEdgeUpdateStart}
-                  onEdgeUpdateEnd={props.onEdgeUpdateEnd}
-                  rfId={props.rfId}
-                />
-              );
-            })}
           </g>
         </svg>
-      ))}
+})}
       {renderConnectionLine && (
         <svg
           style={connectionLineContainerStyle}
